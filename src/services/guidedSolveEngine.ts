@@ -105,7 +105,7 @@ export function generateGuidedSteps(
   // =========================================================================
   // LEVEL 2: PUSH MASTER
   // =========================================================================
-  if (level.type === 'push' || challenge.mode === 'push') {
+  if (challenge.mode === 'push') {
     const pushVal =
       challenge.targetValue !== undefined
         ? challenge.targetValue
@@ -144,6 +144,46 @@ export function generateGuidedSteps(
         statusBadge: 'full',
       });
     }
+
+    return steps;
+  }
+
+  // =========================================================================
+  // ROUND 3: PUSH + POP COMBINED
+  // =========================================================================
+  if (challenge.mode === 'push_pop') {
+    const poppedVal = currentStack[currentStack.length - 1];
+    const afterPop = currentStack.slice(0, -1);
+    const pushVal = 30;
+    const finalStack = [...afterPop, pushVal];
+
+    steps.push({
+      stepNumber: 1,
+      totalSteps: 2,
+      operation: 'POP',
+      value: poppedVal,
+      displayLabel: `POP ${poppedVal}`,
+      actionExplanation: `Step 1: The current TOP element is ${poppedVal}. In LIFO, we remove this unwanted element by calling POP().`,
+      resultExplanation: `${poppedVal} has been removed. The active TOP is now ${afterPop[afterPop.length - 1]}.`,
+      conceptNote: 'POP always removes the most recent element from TOP.',
+      resultingStack: afterPop,
+      resultingTop: afterPop[afterPop.length - 1],
+      statusBadge: 'normal',
+    });
+
+    steps.push({
+      stepNumber: 2,
+      totalSteps: 2,
+      operation: 'PUSH',
+      value: pushVal,
+      displayLabel: `PUSH ${pushVal}`,
+      actionExplanation: `Step 2: Now push ${pushVal} onto the stack to achieve the desired target state.`,
+      resultExplanation: `${pushVal} is pushed to the TOP. Stack is now [${finalStack.join(', ')}], perfectly matching target!`,
+      conceptNote: 'PUSH places the new value on TOP, incrementing the stack length.',
+      resultingStack: finalStack,
+      resultingTop: pushVal,
+      statusBadge: 'normal',
+    });
 
     return steps;
   }

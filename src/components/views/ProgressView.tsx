@@ -39,7 +39,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   const completedTheoryCount = Math.min(12, progress.completedTheoryChapters?.length || 0);
   const completedLabsList = (progress as any).completedLabs || [];
   const completedVideosCount = Math.min(2, completedLabsList.length);
-  const completedGamesCount = Math.min(6, progress.completedGameLevels?.length || 0);
+  const completedGamesCount = Math.min(2, (progress.completedGameLevels || []).filter((id) => id === 1 || id === 2).length);
 
   const quizAnsweredCount = progress.quizCompleted
     ? 10
@@ -52,7 +52,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
   // Theory (30%), Visualize (10%), Game (35%), Quiz (25%)
   const theoryWeight = (completedTheoryCount / 12) * 30;
   const videoWeight = (completedVideosCount / 2) * 10;
-  const gameWeight = (completedGamesCount / 6) * 35;
+  const gameWeight = (completedGamesCount / 2) * 35;
   const quizWeight = progress.quizCompleted
     ? (quizAccuracyPercent / 100) * 25
     : ((quizAnsweredCount / 10) * (quizAccuracyPercent / 100)) * 25;
@@ -85,7 +85,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
         tab: 'lab' as const,
       };
     }
-    if (completedGamesCount < 6) {
+    if (completedGamesCount < 2) {
       return {
         title: 'Try Stack Challenges',
         description: 'Test your understanding with interactive Stack challenges and games.',
@@ -133,14 +133,10 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
     { id: 2, title: '02. Stack Operations' },
   ];
 
-  // ─── 6 GAMES ───
+  // ─── 2 GAMES ───
   const gameChallenges = [
-    { id: 1, title: '01. Pop Master' },
-    { id: 2, title: '02. Push Master' },
-    { id: 3, title: '03. Build the Stack' },
-    { id: 4, title: '04. Predict the Stack' },
-    { id: 5, title: '05. Debug the Stack' },
-    { id: 6, title: '06. Speed Stack' },
+    { id: 1, title: '01. Basic Operations of Stack' },
+    { id: 2, title: '02. Building the Stack' },
   ];
 
   const getStatusBadge = (status: 'Completed' | 'In Progress' | 'Not Started') => {
@@ -226,7 +222,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Games</span>
-              <span className="font-bold text-slate-900 dark:text-white">{completedGamesCount} / 6</span>
+              <span className="font-bold text-slate-900 dark:text-white">{completedGamesCount} / 2</span>
             </div>
             <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Quiz</span>
@@ -417,7 +413,7 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
                       Game
                     </h3>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      6 Interactive Challenges
+                      2 Interactive Game Cards
                     </p>
                   </div>
                 </div>
@@ -433,12 +429,12 @@ export const ProgressView: React.FC<ProgressViewProps> = ({
               <div className="mt-3">
                 <div className="flex justify-between text-xs font-mono mb-1 text-slate-600 dark:text-slate-300">
                   <span>Completed</span>
-                  <span className="font-bold">{completedGamesCount} / 6</span>
+                  <span className="font-bold">{completedGamesCount} / 2</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-600"
-                    style={{ width: `${Math.round((completedGamesCount / 6) * 100)}%` }}
+                    style={{ width: `${Math.round((completedGamesCount / 2) * 100)}%` }}
                   />
                 </div>
               </div>

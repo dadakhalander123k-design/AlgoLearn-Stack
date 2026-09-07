@@ -91,9 +91,9 @@ export const GameHub: React.FC<GameHubProps> = ({
         </p>
       </div>
 
-      {/* ─── 2. EXACTLY 6 GAME CARDS (2x3 Grid on Desktop/Tablet, 1-Col on Mobile) ─── */}
+      {/* ─── 2. EXACTLY TWO GAME CARDS ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-        {GAME_CATALOG.slice(0, 6).map((game) => {
+        {GAME_CATALOG.slice(0, 2).map((game) => {
           const isCompleted = completedLevels.includes(game.id);
           const isInProgress = !isCompleted && game.id === activeLevelId && currentChallengeIndex > 0;
           const formattedNumber = game.levelNumber < 10 ? `0${game.levelNumber}` : `${game.levelNumber}`;
@@ -153,18 +153,18 @@ export const GameHub: React.FC<GameHubProps> = ({
                   {game.description}
                 </p>
 
-                {/* Example sequence inside Card 04 (Predict the Stack) */}
-                {game.id === 4 && (
-                  <div className="mb-4 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 font-mono text-xs text-blue-600 dark:text-blue-400 space-y-1">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-sans mb-1">
-                      Example Sequence:
-                    </div>
-                    <div>Push(10)</div>
-                    <div>Push(20)</div>
-                    <div>Pop()</div>
-                    <div>Push(30)</div>
+                {/* Included Rounds Checklist */}
+                <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
+                    {game.id === 1 ? '3 Rounds Included:' : '2 Rounds Included:'}
                   </div>
-                )}
+                  {game.howToPlay.map((round) => (
+                    <div key={round.stepNumber} className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                      <span className="font-semibold">{round.title}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Card Footer: Metadata & Primary Action Button */}

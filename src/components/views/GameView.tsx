@@ -864,9 +864,9 @@ export const GameView: React.FC<GameViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* LEVEL 1: POP MASTER WORKSPACE */}
+      {/* ROUND 1: POP MODE */}
       {/* ========================================================================= */}
-      {currentLevel.type === 'lifo' && (
+      {currentChallenge?.mode === 'pop' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           {/* Pop Zone Target */}
           <PopZone
@@ -891,9 +891,9 @@ export const GameView: React.FC<GameViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* LEVEL 2: PUSH MASTER WORKSPACE */}
+      {/* ROUND 2: PUSH MODE */}
       {/* ========================================================================= */}
-      {currentLevel.type === 'push' && (
+      {currentChallenge?.mode === 'push' && (
         <div className="space-y-4">
           <AvailableElementsPalette
             elements={availableElements}
@@ -914,7 +914,7 @@ export const GameView: React.FC<GameViewProps> = ({
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <StackVisualizer
               items={activeStack}
-              capacity={currentChallenge?.capacity || 5}
+              capacity={currentChallenge?.capacity || 6}
               onDropItem={!isGuidedSolveActive ? (val) => handlePushValue(Number(val)) : undefined}
               peekValue={guidedPeekValue}
               allowDragPop={false}
@@ -925,9 +925,64 @@ export const GameView: React.FC<GameViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* LEVEL 3: BUILD THE STACK WORKSPACE */}
+      {/* ROUND 3: PUSH + POP MODE */}
       {/* ========================================================================= */}
-      {currentLevel.type === 'build' && (
+      {currentChallenge?.mode === 'push_pop' && (
+        <div className="space-y-4">
+          <AvailableElementsPalette
+            elements={availableElements}
+            onSelectElement={handleBuildPushValue}
+            onPopTop={() => handleBuildPop()}
+            currentTopValue={currentTopValue}
+            showPopAction={activeStack.length > 0}
+            disabled={isGuidedSolveActive || feedbackStatus === 'correct'}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <div className="space-y-4">
+              <TargetStackDisplay
+                targetStack={currentChallenge?.targetStack}
+                description="Target Stack to Achieve (Bottom to Top)"
+              />
+
+              {/* Dedicated Pop / Undo Zone */}
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                    POP / REMOVAL ZONE
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Drag top item here or click button
+                  </span>
+                </div>
+                <PopZone
+                  topElementValue={currentTopValue}
+                  onPopSuccess={(val) => handleBuildPop(val)}
+                  onPopInvalid={handlePopInvalid}
+                  disabled={isGuidedSolveActive || feedbackStatus === 'correct' || activeStack.length === 0}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <StackVisualizer
+                items={activeStack}
+                capacity={currentChallenge?.capacity || 5}
+                onDropItem={!isGuidedSolveActive ? (val) => handleBuildPushValue(Number(val)) : undefined}
+                onInvalidPopAttempt={handlePopInvalid}
+                peekValue={guidedPeekValue}
+                allowDragPop={!isGuidedSolveActive && feedbackStatus !== 'correct'}
+                customEmptyMessage="Pop unwanted elements or push elements from palette to match target."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CARD 2 - ROUND 1: BUILD THE STACK */}
+      {/* ========================================================================= */}
+      {currentChallenge?.mode === 'build' && (
         <div className="space-y-4">
           <AvailableElementsPalette
             elements={availableElements}
@@ -980,9 +1035,9 @@ export const GameView: React.FC<GameViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* LEVEL 4: PREDICT THE STACK WORKSPACE */}
+      {/* CARD 2 - ROUND 2: PREDICT THE STACK */}
       {/* ========================================================================= */}
-      {currentLevel.type === 'predict' && (
+      {currentChallenge?.mode === 'predict' && (
         <div className="space-y-4">
           <AvailableElementsPalette
             elements={availableElements}
@@ -1033,53 +1088,6 @@ export const GameView: React.FC<GameViewProps> = ({
             </div>
           </div>
         </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* LEVEL 5: DEBUG THE STACK WORKSPACE */}
-      {/* ========================================================================= */}
-      {currentLevel.type === 'debug' && (
-        <DebugAnalysisZone
-          debugSteps={currentChallenge?.debugSteps || []}
-          onIdentifiedError={handleDebugSuccess}
-          onWrongStepSelected={handleDebugWrongStep}
-          identifiedStep={identifiedStep}
-          wrongStepAttempted={wrongStepAttempted}
-          disabled={isGuidedSolveActive}
-        />
-      )}
-
-      {/* ========================================================================= */}
-      {/* LEVEL 6: SPEED STACK WORKSPACE */}
-      {/* ========================================================================= */}
-      {currentLevel.type === 'speed' && (
-        <SpeedStackWorkspace
-          isRunning={speedRunning}
-          timeLeft={speedTimer}
-          score={speedScore}
-          combo={speedCombo}
-          currentPromptIndex={speedStep}
-          totalPrompts={challenges.length}
-          activePromptText={currentChallenge?.instruction || 'Ready...'}
-          activePromptAction={currentChallenge?.mode === 'pop' ? 'POP' : 'PUSH'}
-          stack={activeStack}
-          availableElements={currentChallenge?.availableElements || [10, 20, 30, 40, 50]}
-          disabled={isGuidedSolveActive}
-          isGuidedSolveActive={isGuidedSolveActive}
-          peekValue={guidedPeekValue}
-          onStartSpeed={() => {
-            soundEffects.playClick();
-            setSpeedRunning(true);
-            setSpeedTimer(45);
-            setSpeedScore(0);
-            setSpeedCombo(1);
-            setSpeedStep(0);
-            setCurrentChallengeIndex(0);
-            setActiveStack([]);
-          }}
-          onPushValue={(val) => handleSpeedAction('PUSH', val)}
-          onPopTop={() => handleSpeedAction('POP')}
-        />
       )}
     </div>
   );
