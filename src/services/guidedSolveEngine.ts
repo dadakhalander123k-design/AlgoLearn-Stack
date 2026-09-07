@@ -189,8 +189,28 @@ export function generateGuidedSteps(
   }
 
   // =========================================================================
-  // LEVEL 3: BUILD THE STACK
+  // ROUND 4: PEEK OPERATION
   // =========================================================================
+  if (challenge.mode === 'peek') {
+    const topVal = currentStack.length > 0 ? currentStack[currentStack.length - 1] : 50;
+
+    steps.push({
+      stepNumber: 1,
+      totalSteps: 1,
+      operation: 'PEEK',
+      value: topVal,
+      displayLabel: `PEEK() → ${topVal}`,
+      actionExplanation: `We call peek() to inspect the element at the TOP of the stack. The current TOP pointer points to ${topVal}.`,
+      resultExplanation: `peek() returns ${topVal}. Notice the stack still contains [${currentStack.join(', ')}] — no elements were removed or altered!`,
+      conceptNote: 'PEEK (also called top()) is a non-destructive read operation with O(1) time complexity.',
+      resultingStack: [...currentStack],
+      resultingTop: topVal,
+      peekValue: topVal,
+      statusBadge: 'normal',
+    });
+
+    return steps;
+  }
   if (level.type === 'build' || challenge.targetStack) {
     const target = challenge.targetStack || [10, 20, 30, 40];
     const total = target.length;

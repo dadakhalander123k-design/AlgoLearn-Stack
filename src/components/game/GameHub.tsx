@@ -149,22 +149,9 @@ export const GameHub: React.FC<GameHubProps> = ({
                 </h2>
 
                 {/* Short Description */}
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
                   {game.description}
                 </p>
-
-                {/* Included Rounds Checklist */}
-                <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
-                    {game.id === 1 ? '3 Rounds Included:' : '2 Rounds Included:'}
-                  </div>
-                  {game.howToPlay.map((round) => (
-                    <div key={round.stepNumber} className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                      <span className="font-semibold">{round.title}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* Card Footer: Metadata & Primary Action Button */}

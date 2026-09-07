@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { Eye } from 'lucide-react';
 import { GameLevelConfig, GameChallenge, StackItem, UserProgress } from '../../types';
 import { GAME_LEVELS } from '../../data/gameData';
 import { GAME_CATALOG, GameMetaData } from '../../data/gameMeta';
@@ -80,6 +81,7 @@ export const GameView: React.FC<GameViewProps> = ({
   const [guidedSteps, setGuidedSteps] = useState<GuidedStep[]>([]);
   const [guidedStepIndex, setGuidedStepIndex] = useState<number>(0);
   const [guidedPeekValue, setGuidedPeekValue] = useState<number | string | null>(null);
+  const [activePeekValue, setActivePeekValue] = useState<number | string | null>(null);
 
   // Initialize or Reset Challenge State
   const setupChallenge = useCallback((challenge: GameChallenge) => {
@@ -102,6 +104,7 @@ export const GameView: React.FC<GameViewProps> = ({
     setWrongStepAttempted(null);
     setIsGuidedSolveActive(false);
     setGuidedPeekValue(null);
+    setActivePeekValue(null);
   }, []);
 
   // When active level or challenge changes, re-initialize
@@ -357,6 +360,7 @@ export const GameView: React.FC<GameViewProps> = ({
     soundEffects.playClick();
     setIsGuidedSolveActive(false);
     setGuidedPeekValue(null);
+    setActivePeekValue(null);
     if (currentChallenge) {
       setupChallenge(currentChallenge);
     }
@@ -474,6 +478,52 @@ export const GameView: React.FC<GameViewProps> = ({
       setFeedbackStatus('incorrect');
       setFeedbackTitle('Incorrect Push Element');
       setFeedbackActionText(`The algorithm requested [${currentChallenge.targetValue}], but you selected [${val}].`);
+      setFeedbackLifoReason(currentChallenge.feedback.incorrectTip);
+    }
+  };
+
+  // =========================================================================
+  // HANDLERS FOR PEEK (CARD 1 - ROUND 4)
+  // =========================================================================
+  const handlePeekValue = (val: number) => {
+    const isTarget = currentChallenge.targetValue === undefined || currentChallenge.targetValue === val;
+
+    if (isTarget) {
+      soundEffects.playClick();
+      try {
+        confetti({
+          particleCount: 35,
+          spread: 50,
+          origin: { y: 0.65 },
+        });
+      } catch {
+        // Ignore
+      }
+
+      setActivePeekValue(val);
+
+      const xpReward = currentChallenge.xpReward || 25;
+      setEarnedXP(xpReward);
+      const { updated } = awardXP(
+        progress,
+        xpReward,
+        `challenge_${currentChallenge.id}_success`,
+        `Completed ${currentChallenge.question}`,
+        currentLevel.title
+      );
+      onUpdateProgress(updated);
+
+      setFeedbackStatus('correct');
+      setFeedbackTitle(currentChallenge.feedback.correctTitle);
+      setFeedbackActionText(currentChallenge.feedback.correctActionText);
+      setFeedbackLifoReason(currentChallenge.feedback.lifoReason);
+    } else {
+      soundEffects.playError();
+      setMistakes((m) => m + 1);
+
+      setFeedbackStatus('incorrect');
+      setFeedbackTitle('Incorrect Peek Inspection');
+      setFeedbackActionText(`You selected [${val}], but the element at the TOP index is [${currentChallenge.targetValue}].`);
       setFeedbackLifoReason(currentChallenge.feedback.incorrectTip);
     }
   };
@@ -939,7 +989,7 @@ export const GameView: React.FC<GameViewProps> = ({
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div className="space-y-4">
+            <div className="order-2 md:order-1 space-y-4">
               <TargetStackDisplay
                 targetStack={currentChallenge?.targetStack}
                 description="Target Stack to Achieve (Bottom to Top)"
@@ -964,7 +1014,7 @@ export const GameView: React.FC<GameViewProps> = ({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="order-1 md:order-2 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <StackVisualizer
                 items={activeStack}
                 capacity={currentChallenge?.capacity || 5}
@@ -973,6 +1023,94 @@ export const GameView: React.FC<GameViewProps> = ({
                 peekValue={guidedPeekValue}
                 allowDragPop={!isGuidedSolveActive && feedbackStatus !== 'correct'}
                 customEmptyMessage="Pop unwanted elements or push elements from palette to match target."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* CARD 1 - ROUND 4: PEEK MODE */}
+      {/* ========================================================================= */}
+      {currentChallenge?.mode === 'peek' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* Peek Inspection Controls (order-2 on mobile, order-1 on desktop) */}
+            <div className="order-2 md:order-1 space-y-4">
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <Eye className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                        PEEK / TOP INSPECTION
+                      </h3>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Read-only operation • O(1) Time Complexity
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    Non-Destructive
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Which element is returned by calling <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 font-mono text-indigo-600 dark:text-indigo-400 font-bold">peek()</code> on the current stack?
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {availableElements.map((val) => {
+                      const isCorrectSelection = feedbackStatus === 'correct' && (activePeekValue === val || currentChallenge.targetValue === val);
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          disabled={isGuidedSolveActive || feedbackStatus === 'correct'}
+                          onClick={() => handlePeekValue(val)}
+                          className={`px-4 py-2.5 rounded-xl font-mono text-sm font-bold transition-all ${
+                            isCorrectSelection
+                              ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400'
+                              : 'bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Primary Quick Execute Button */}
+                <button
+                  type="button"
+                  disabled={isGuidedSolveActive || feedbackStatus === 'correct'}
+                  onClick={() => {
+                    if (currentChallenge.targetValue !== undefined) {
+                      handlePeekValue(currentChallenge.targetValue);
+                    } else if (currentTopValue !== null) {
+                      handlePeekValue(Number(currentTopValue));
+                    }
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold tracking-wide uppercase flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Eye className="w-4 h-4" />
+                  Execute peek() on Top
+                </button>
+              </div>
+            </div>
+
+            {/* Current Stack Visualizer (order-1 on mobile, order-2 on desktop) */}
+            <div className="order-1 md:order-2 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+              <StackVisualizer
+                items={activeStack}
+                capacity={currentChallenge?.capacity || 6}
+                peekValue={activePeekValue ?? guidedPeekValue}
+                allowDragPop={false}
+                customEmptyMessage="Stack is empty."
               />
             </div>
           </div>
@@ -994,7 +1132,7 @@ export const GameView: React.FC<GameViewProps> = ({
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div className="space-y-4">
+            <div className="order-2 md:order-1 space-y-4">
               <TargetStackDisplay
                 targetStack={currentChallenge?.targetStack}
                 description="Target structure (Bottom to Top)"
@@ -1019,7 +1157,7 @@ export const GameView: React.FC<GameViewProps> = ({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="order-1 md:order-2 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <StackVisualizer
                 items={activeStack}
                 capacity={currentChallenge?.capacity || 5}
@@ -1049,7 +1187,7 @@ export const GameView: React.FC<GameViewProps> = ({
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div className="space-y-4">
+            <div className="order-2 md:order-1 space-y-4">
               <TargetStackDisplay
                 operationsTrace={currentChallenge?.operationsTrace}
                 title="Execution Code Trace"
@@ -1075,7 +1213,7 @@ export const GameView: React.FC<GameViewProps> = ({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="order-1 md:order-2 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <StackVisualizer
                 items={activeStack}
                 capacity={currentChallenge?.capacity || 5}

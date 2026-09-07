@@ -157,7 +157,7 @@ export interface GameChallenge {
   id: string;
   challengeNumber: number;
   totalChallengesInLevel: number;
-  mode: 'pop' | 'push' | 'build' | 'predict' | 'debug' | 'speed' | 'push_pop';
+  mode: 'pop' | 'push' | 'build' | 'predict' | 'debug' | 'speed' | 'push_pop' | 'peek';
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   question: string;
   instruction: string;

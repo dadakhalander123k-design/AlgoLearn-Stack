@@ -2,22 +2,22 @@ import { GameLevelConfig } from '../types';
 
 export const GAME_LEVELS: GameLevelConfig[] = [
   // ==========================================
-  // CARD 1: BASIC OPERATIONS OF STACK (3 Rounds)
+  // CARD 1: BASIC OPERATIONS OF STACK (4 Rounds)
   // ==========================================
   {
     id: 1,
     levelNumber: 1,
     title: 'Basic Operations of Stack',
-    subtitle: 'Pop, Push & Push + Pop Operations',
+    subtitle: 'Pop, Push, Push + Pop & Peek Operations',
     type: 'basic_operations',
     difficulty: 'Beginner',
-    description: 'Master the core operations of Stack through 3 progressive rounds: POP, PUSH, and PUSH + POP.',
+    description: 'Master the core operations of Stack through 4 progressive rounds: POP, PUSH, PUSH + POP, and PEEK.',
     xpReward: 100,
     stars: 3,
     hints: [
       'Stack adheres strictly to LIFO (Last In, First Out).',
-      'Pop removes only the topmost element, while Push places elements on top.',
-      'In combined rounds, remove overhead or unwanted elements first before pushing new ones.',
+      'Pop removes the top, Push adds to top, and combined rounds pop before pushing.',
+      'Peek (or Top) allows safe inspection of the topmost value without altering the stack size.',
     ],
     challenges: [
       // ----------------------------------------------------
@@ -26,7 +26,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
       {
         id: 'c1-r1-pop',
         challengeNumber: 1,
-        totalChallengesInLevel: 3,
+        totalChallengesInLevel: 4,
         mode: 'pop',
         difficulty: 'Beginner',
         question: 'ROUND 1: POP THE TOP ELEMENT',
@@ -50,7 +50,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           lifoReason: 'Stack follows LIFO: Last In, First Out. 50 was at the topmost position.',
           incorrectTip: 'Only the TOP element can be popped. Elements buried below cannot be removed directly.',
         },
-        xpReward: 30,
+        xpReward: 25,
       },
 
       // ----------------------------------------------------
@@ -59,7 +59,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
       {
         id: 'c1-r2-push',
         challengeNumber: 2,
-        totalChallengesInLevel: 3,
+        totalChallengesInLevel: 4,
         mode: 'push',
         difficulty: 'Beginner',
         question: 'ROUND 2: PUSH ELEMENT ONTO STACK',
@@ -84,7 +84,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           lifoReason: 'In LIFO, every pushed element immediately becomes the new active TOP.',
           incorrectTip: 'Push the requested value [40] from the available elements.',
         },
-        xpReward: 35,
+        xpReward: 25,
       },
 
       // ----------------------------------------------------
@@ -93,7 +93,7 @@ export const GAME_LEVELS: GameLevelConfig[] = [
       {
         id: 'c1-r3-pushpop',
         challengeNumber: 3,
-        totalChallengesInLevel: 3,
+        totalChallengesInLevel: 4,
         mode: 'push_pop',
         difficulty: 'Beginner',
         question: 'ROUND 3: PUSH + POP OPERATIONS',
@@ -118,7 +118,41 @@ export const GAME_LEVELS: GameLevelConfig[] = [
           lifoReason: 'Both fundamental stack operations executed in proper LIFO order.',
           incorrectTip: 'Pop the top element [99] first, then push [30] to match the target stack.',
         },
-        xpReward: 35,
+        xpReward: 25,
+      },
+
+      // ----------------------------------------------------
+      // ROUND 4: PEEK (INSPECT TOP)
+      // ----------------------------------------------------
+      {
+        id: 'c1-r4-peek',
+        challengeNumber: 4,
+        totalChallengesInLevel: 4,
+        mode: 'peek',
+        difficulty: 'Beginner',
+        question: 'ROUND 4: PEEK (INSPECT THE TOP ELEMENT)',
+        instruction: 'The Stack currently holds [10, 20, 30, 40, 50]. The peek() operation inspects the topmost element WITHOUT modifying or removing anything from the stack. Execute peek() or select the value returned by peek().',
+        initialStack: [10, 20, 30, 40, 50],
+        availableElements: [10, 20, 30, 40, 50],
+        capacity: 6,
+        targetValue: 50,
+        hint: {
+          title: 'Peek / Top Operation',
+          thoughtPrompt: 'Does peek() alter the size or elements in the stack?',
+          clue: 'No! peek() is a non-destructive read. It looks up the topmost element (value 50) without popping it.',
+        },
+        guide: {
+          ruleTitle: 'PEEK Operation Rule',
+          ruleDescription: 'PEEK (also known as top()) retrieves the value of the most recently added element without modifying the stack. Time complexity is O(1).',
+          example: 'Stack [10, 20, 30] → peek() returns 30, and stack remains [10, 20, 30].',
+        },
+        feedback: {
+          correctTitle: 'Round 4 Complete: Peek Mastered!',
+          correctActionText: 'peek() returned 50 from TOP. Notice the stack structure and size remain completely unaltered!',
+          lifoReason: 'peek() provides safe read-only access to the TOP element with O(1) time complexity.',
+          incorrectTip: 'peek() retrieves only the topmost element (at index TOP). Non-top elements cannot be peeked directly.',
+        },
+        xpReward: 25,
       },
     ],
   },
