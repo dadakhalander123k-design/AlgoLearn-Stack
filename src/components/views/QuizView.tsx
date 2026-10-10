@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Eye,
   Home,
+  ShieldCheck,
   Clock,
   Timer,
 } from 'lucide-react';
@@ -328,92 +329,91 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
   return (
     <div className="space-y-6 pb-12 max-w-4xl mx-auto">
-      {/* ─── SCORING RULES & LIVE QUIZ POINTS BANNER ─── */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-extrabold uppercase tracking-wider text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            Quiz Scoring Rules:
+      {/* ─── 1. TOP HEADER & BADGE (EXACT STRUCTURE FROM REFERENCE IMAGE) ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/80 border border-blue-200/80 dark:border-blue-800 text-blue-600 dark:text-blue-400 font-mono text-[11px] font-bold tracking-wider uppercase">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>KNOWLEDGE ASSESSMENT</span>
           </span>
-          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-            Correct: +4 pts
-          </span>
-          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
-            Wrong: -2 pts
-          </span>
-          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
-            Timeout: 0 pts
+
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Simple Stack Quiz ({QUIZ_QUESTIONS.length} Questions)
           </span>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-center font-mono font-black text-xs text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 shadow-2xs">
-          <span>QUIZ POINTS:</span>
-          <span className="text-sm text-blue-600 dark:text-blue-400">{currentQuizPoints} / 40 PTS</span>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-              <HelpCircle className="w-5 h-5" />
-            </span>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-              Quiz Assessment
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            10 Questions • 30s per question • Answered once with immediate scoring.
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Stack Knowledge Check
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed max-w-3xl">
+            Test your understanding of LIFO principle, stack operations (Push, Pop, Peek), overflow &amp; underflow, array vs linked list implementations, and complexity.
           </p>
         </div>
-
-        {/* Question Counter & Controls */}
-        {!quizFinished && (
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-mono">
-              Question {currentIdx + 1} of {QUIZ_QUESTIONS.length}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Progress Bar & Question Step Pill Navigation */}
-      {!quizFinished && (
-        <div className="space-y-2">
-          <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
-            <div
-              className="h-full bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-500 transition-all duration-300"
-              style={{
-                width: `${((currentIdx + 1) / QUIZ_QUESTIONS.length) * 100}%`,
-              }}
-            />
+      {/* ─── 2. QUIZ SCORING RULES CARD (EXACT AMBER CARD FROM IMAGE) ─── */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs space-y-2.5">
+        <div className="font-extrabold text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex items-center gap-1.5">
+          <Sparkles className="w-4 h-4 fill-amber-500 text-amber-500" />
+          <span>Quiz Scoring Rules:</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-700 dark:text-slate-300 font-medium">
+          <div className="flex items-center gap-1.5">
+            <span>Correct answer:</span>
+            <span className="px-2 py-0.5 rounded-md font-bold font-mono bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-800">
+              +4 pts
+            </span>
           </div>
 
-          {/* Quick Question Stepper Chips */}
-          <div className="flex items-center justify-between gap-1 overflow-x-auto py-1 px-0.5">
+          <span className="text-amber-300 dark:text-amber-700 hidden sm:inline">|</span>
+
+          <div className="flex items-center gap-1.5">
+            <span>Wrong answer:</span>
+            <span className="px-2 py-0.5 rounded-md font-bold font-mono bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300/80 dark:border-rose-800">
+              -2 pts
+            </span>
+          </div>
+
+          <span className="text-amber-300 dark:text-amber-700 hidden sm:inline">|</span>
+
+          <div className="flex items-center gap-1.5">
+            <span>Timeout or unanswered:</span>
+            <span className="px-2 py-0.5 rounded-md font-bold font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              0 pts
+            </span>
+          </div>
+
+          <span className="text-amber-300 dark:text-amber-700 hidden sm:inline">|</span>
+        </div>
+
+        <div className="flex items-center gap-2 pt-0.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
+          <span>Maximum positive Quiz score:</span>
+          <span className="px-2.5 py-0.5 rounded-md font-bold font-mono bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+            40 pts
+          </span>
+        </div>
+      </div>
+
+      {/* ─── 3. PROGRESS ROW & QUESTION BUTTONS (EXACT REFERENCE LAYOUT) ─── */}
+      {!quizFinished && (
+        <div className="space-y-3">
+          {/* Progress label */}
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            <Sparkles className="w-3.5 h-3.5 text-blue-500 fill-blue-500" />
+            <span>
+              Progress: <strong className="text-blue-600 dark:text-blue-400 font-bold">{totalAnswered}</strong> / {QUIZ_QUESTIONS.length} Answered
+            </span>
+          </div>
+
+          {/* Question buttons Q1..Q10 in 1 row (grid of 10) */}
+          <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
             {QUIZ_QUESTIONS.map((q, idx) => {
               const ans = answers[idx];
               const score = quizScores[idx];
               const isCurrent = idx === currentIdx;
-              let chipBg =
-                'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
-
-              if (isCurrent) {
-                chipBg =
-                  'bg-blue-600 text-white border-blue-500 ring-2 ring-blue-300 dark:ring-blue-800 font-bold';
-              } else if (ans?.isSubmitted || score !== undefined) {
-                if (score === 4 || ans?.isCorrect) {
-                  chipBg =
-                    'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700';
-                } else if (score === 0 || ans?.isTimedOut) {
-                  chipBg =
-                    'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700';
-                } else {
-                  chipBg =
-                    'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700';
-                }
-              }
+              const isAnswered = ans?.isSubmitted || score !== undefined;
 
               return (
                 <button
@@ -422,18 +422,18 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     soundEffects.playClick();
                     setCurrentIdx(idx);
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono border transition-all cursor-pointer flex items-center gap-1 shrink-0 ${chipBg}`}
-                  title={`Question ${idx + 1}: ${q.type}`}
+                  className={`py-2 px-1 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex flex-col items-center justify-center min-h-[44px] shadow-2xs ${
+                    isCurrent
+                      ? 'bg-blue-600 text-white border border-blue-500 shadow-sm'
+                      : isAnswered
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                  title={`Question ${idx + 1}`}
                 >
                   <span>Q{idx + 1}</span>
-                  {(score === 4 || (ans?.isSubmitted && ans.isCorrect)) && (
-                    <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
-                  )}
-                  {(score === -2 || (ans?.isSubmitted && !ans.isCorrect && !ans.isTimedOut)) && (
-                    <span className="text-[10px] text-rose-500 font-black leading-none">✕</span>
-                  )}
-                  {(score === 0 || (ans?.isSubmitted && ans.isTimedOut)) && (
-                    <Clock className="w-3 h-3 text-slate-400" />
+                  {isAnswered && (
+                    <span className="text-[10px] leading-tight font-black mt-0.5">✓</span>
                   )}
                 </button>
               );
@@ -754,9 +754,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase block">Reward XP</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase block">Quiz Points</span>
                   <span className="text-xl font-mono font-black text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1">
-                    <Sparkles className="w-4 h-4" /> +150
+                    <Sparkles className="w-4 h-4" /> +{currentQuizPoints} PTS
                   </span>
                 </div>
 
