@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   Clock,
   Timer,
+  Play,
+  X,
 } from 'lucide-react';
 import { QuizQuestion, UserProgress } from '../../types';
 import { QUIZ_QUESTIONS } from '../../data/quizData';
@@ -66,6 +68,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [timeLeft, setTimeLeft] = useState<number>(QUESTION_TIME_LIMIT);
   const [quizFinished, setQuizFinished] = useState<boolean>(progress.quizCompleted || false);
   const [resultFilter, setResultFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
+  const [isQuizStarted, setIsQuizStarted] = useState<boolean>(() => {
+    // If user already answered any question or completed the quiz, consider quiz started
+    const saved = progress.quizQuestionScores || {};
+    return Object.keys(saved).length > 0 || (progress.quizCompleted || false);
+  });
+  const [showStartWarning, setShowStartWarning] = useState<boolean>(false);
 
   const currentQ: QuizQuestion = QUIZ_QUESTIONS[currentIdx];
   const currentAnswerState = answers[currentIdx] || {
@@ -76,9 +84,25 @@ export const QuizView: React.FC<QuizViewProps> = ({
     isTimedOut: false,
   };
 
+  // Auto-dismiss the start quiz warning toast after 4.5 seconds
+  useEffect(() => {
+    if (showStartWarning) {
+      const timer = setTimeout(() => {
+        setShowStartWarning(false);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [showStartWarning]);
+
   // Timer countdown per question
   useEffect(() => {
     if (quizFinished || currentAnswerState.isSubmitted) return;
+
+    // Only start countdown for question 1 if user clicked Start Quiz
+    if (!isQuizStarted && currentIdx === 0) {
+      setTimeLeft(QUESTION_TIME_LIMIT);
+      return;
+    }
 
     setTimeLeft(QUESTION_TIME_LIMIT);
 
@@ -94,7 +118,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentIdx, currentAnswerState.isSubmitted, quizFinished]);
+  }, [currentIdx, currentAnswerState.isSubmitted, quizFinished, isQuizStarted]);
+
+  const handleStartQuiz = () => {
+    soundEffects.playClick();
+    setIsQuizStarted(true);
+    setShowStartWarning(false);
+  };
 
   // Timeout handler: 0 points awarded
   const handleTimeout = () => {
@@ -190,6 +220,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
   const handleSubmitAnswer = () => {
     if (currentAnswerState.isSubmitted) return;
+
+    // Must start quiz on question 1 before submitting
+    if (!isQuizStarted && currentIdx === 0) {
+      soundEffects.playError();
+      setShowStartWarning(true);
+      return;
+    }
+
     soundEffects.playClick();
 
     let isCorrect = false;
@@ -298,6 +336,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setCurrentIdx(0);
     setQuizFinished(false);
     setResultFilter('all');
+    setIsQuizStarted(true);
   };
 
   // Compute live score stats
@@ -442,63 +481,122 @@ export const QuizView: React.FC<QuizViewProps> = ({
         </div>
       )}
 
+      {/* ─── FLOATING TOAST: START QUIZ REQUIRED (EXACT STYLE FROM IMAGE 2) ─── */}
+      {showStartWarning && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in zoom-in-95 duration-200 w-[92%] max-w-md">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200/90 dark:border-rose-900/80 shadow-2xl shadow-rose-500/10">
+            <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 flex items-center justify-center text-rose-600 dark:text-rose-400 font-bold shrink-0">
+              <AlertCircle className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0 text-xs sm:text-sm">
+              <span className="font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                Please Start Quiz
+              </span>
+              <span className="text-slate-300 dark:text-slate-600">—</span>
+              <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
+                Click "Start Quiz" to begin Question 1
+              </span>
+            </div>
+            <button
+              onClick={() => setShowStartWarning(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
+              aria-label="Dismiss warning"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Quiz Question Card */}
       {!quizFinished ? (
         <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-6">
-          {/* Question Category Badge, Timer & Status */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                {currentQ.type.replace('-', ' ')}
-              </span>
-
-              {/* Question Countdown Timer */}
-              {!currentAnswerState.isSubmitted && (
-                <div
-                  className={`px-3 py-1 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 border transition-all ${
-                    timeLeft <= 5
-                      ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 animate-pulse'
-                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                  }`}
-                >
-                  <Timer className="w-3.5 h-3.5" />
-                  <span>{timeLeft}s remaining</span>
-                </div>
-              )}
-
-              {/* Status Badge after evaluation */}
-              {currentAnswerState.isSubmitted && (
-                <span
-                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                    currentAnswerState.isTimedOut
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
-                      : currentAnswerState.isCorrect
-                      ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700'
-                      : 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700'
-                  }`}
-                >
-                  {currentAnswerState.isTimedOut
-                    ? '⏱ Time Expired (0 pts)'
-                    : currentAnswerState.isCorrect
-                    ? '✓ Correct (+4 pts)'
-                    : '✕ Incorrect (-2 pts)'}
+          {/* ─── QUESTION HEADER BAR (EXACT REFERENCE FROM IMAGE 1) ─── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              {/* Left: Question 01 of 10 & STK-01 */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="px-3.5 py-1.5 rounded-lg bg-blue-600 text-white font-mono font-bold text-xs shadow-2xs">
+                  Question {String(currentIdx + 1).padStart(2, '0')} of {QUIZ_QUESTIONS.length}
                 </span>
-              )}
+                <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
+                  STK-{String(currentIdx + 1).padStart(2, '0')}
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 hidden sm:inline-block">
+                  {currentQ.type.replace('-', ' ')}
+                </span>
+              </div>
+
+              {/* Right: Quiz Score, Start Quiz Button (Q1 only when not started), Timer Badge */}
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                {/* Quiz Score Box */}
+                <div className="px-3 py-1.5 rounded-lg font-mono text-xs font-semibold bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+                  Quiz Score: <span className="font-bold text-blue-600 dark:text-blue-400">{currentQuizPoints}</span> / 40 pts
+                </div>
+
+                {/* Start Quiz Button (ONLY on Question 1, when quiz has not started and not submitted) */}
+                {!isQuizStarted && currentIdx === 0 && !currentAnswerState.isSubmitted && (
+                  <button
+                    onClick={handleStartQuiz}
+                    className="px-3.5 py-1.5 rounded-lg font-bold text-xs bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex items-center gap-1.5 shadow-xs transition-all cursor-pointer animate-pulse"
+                    id="start-quiz-button"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Start Quiz</span>
+                  </button>
+                )}
+
+                {/* Timer Badge (Image 1 style) */}
+                {!currentAnswerState.isSubmitted && (
+                  <div
+                    className={`px-3 py-1.5 rounded-lg border font-mono font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs ${
+                      timeLeft <= 5 && isQuizStarted
+                        ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 animate-pulse'
+                        : 'bg-blue-50/70 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{timeLeft}s</span>
+                  </div>
+                )}
+
+                {/* Status Badge after evaluation */}
+                {currentAnswerState.isSubmitted && (
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-lg border ${
+                      currentAnswerState.isTimedOut
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                        : currentAnswerState.isCorrect
+                        ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700'
+                        : 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700'
+                    }`}
+                  >
+                    {currentAnswerState.isTimedOut
+                      ? '⏱ Time Expired (0 pts)'
+                      : currentAnswerState.isCorrect
+                      ? '✓ Correct (+4 pts)'
+                      : '✕ Incorrect (-2 pts)'}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Timer Bar */}
-            {!currentAnswerState.isSubmitted && (
+            {/* Subtle Divider Line from Image 1 */}
+            <div className="border-b border-slate-100 dark:border-slate-800" />
+
+            {/* Timer Progress Bar (active during timed question) */}
+            {!currentAnswerState.isSubmitted && isQuizStarted && (
               <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-1000 ${
-                    timeLeft <= 5 ? 'bg-rose-500' : 'bg-amber-500'
+                    timeLeft <= 5 ? 'bg-rose-500' : 'bg-blue-500'
                   }`}
                   style={{ width: `${(timeLeft / QUESTION_TIME_LIMIT) * 100}%` }}
                 />
               </div>
             )}
 
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2.5 leading-relaxed whitespace-pre-line">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-relaxed whitespace-pre-line pt-1">
               {currentQ.question}
             </h2>
           </div>
