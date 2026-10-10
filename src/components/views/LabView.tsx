@@ -74,15 +74,8 @@ export const LabView: React.FC<LabViewProps> = ({
         name: file.name,
       });
       setSelectedLessonId(1);
-      soundEffects.playSuccess();
-
-      if (!progress.completedLabs?.includes(1)) {
-        onUpdateProgress((prev) => ({
-          ...prev,
-          completedLabs: [...(prev.completedLabs || []), 1],
-          xp: prev.xp + 50,
-        }));
-      }
+      soundEffects.playClick();
+      // Completion is awarded ONLY when video finishes playback completely
     }
   };
 
@@ -98,15 +91,8 @@ export const LabView: React.FC<LabViewProps> = ({
         name: file.name,
       });
       setSelectedLessonId(2);
-      soundEffects.playSuccess();
-
-      if (!progress.completedLabs?.includes(2)) {
-        onUpdateProgress((prev) => ({
-          ...prev,
-          completedLabs: [...(prev.completedLabs || []), 2],
-          xp: prev.xp + 50,
-        }));
-      }
+      soundEffects.playClick();
+      // Completion is awarded ONLY when video finishes playback completely
     }
   };
 
@@ -119,15 +105,7 @@ export const LabView: React.FC<LabViewProps> = ({
     if (playerContainerRef.current) {
       playerContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-
-    // Award lab completion upon watching
-    if (!progress.completedLabs?.includes(lessonId)) {
-      onUpdateProgress((prev) => ({
-        ...prev,
-        completedLabs: [...(prev.completedLabs || []), lessonId],
-        xp: prev.xp + 50,
-      }));
-    }
+    // Completion and points are awarded ONLY upon 100% video completion, not on watch click
   };
 
   // Selected Lesson object
@@ -137,8 +115,10 @@ export const LabView: React.FC<LabViewProps> = ({
   const currentCustomUrl = selectedLessonId === 1 ? video1.url : video2.url;
   const currentCustomName = selectedLessonId === 1 ? video1.name : video2.name;
 
-  const isLesson1Completed = progress.completedLabs?.includes(1);
-  const isLesson2Completed = progress.completedLabs?.includes(2);
+  const isLesson1Completed = (progress.completedLabs || []).includes(1);
+  const isLesson2Completed = (progress.completedLabs || []).includes(2);
+  const completedVideosCount = (isLesson1Completed ? 1 : 0) + (isLesson2Completed ? 1 : 0);
+  const currentVisualizationPoints = completedVideosCount * 10;
 
   return (
     <div className="space-y-8 pb-16 max-w-6xl mx-auto">
@@ -161,10 +141,23 @@ export const LabView: React.FC<LabViewProps> = ({
       />
 
       {/* ─── VISUALIZE SECTION HEADING ─── */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-          VISUALIZE
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            VISUALIZATION
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            2 Videos • 10 Points per video • Total: 20 Points. Watch until completion to earn points.
+          </p>
+        </div>
+
+        {/* Section Points Badge */}
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="px-3.5 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-mono font-bold text-xs flex items-center gap-1.5 shadow-2xs">
+            <Award className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span>{currentVisualizationPoints} / 20 PTS</span>
+          </div>
+        </div>
       </div>
 
       {/* ─── TWO LESSON CARDS GRID ─── */}
@@ -179,20 +172,24 @@ export const LabView: React.FC<LabViewProps> = ({
           }`}
         >
           <div className="space-y-4">
-            {/* Top Row: Lesson label + Video Icon Container */}
+            {/* Top Row: Lesson label + Points Badge + Video Icon Container */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-bold px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider border border-slate-200/80 dark:border-slate-700/80">
                   LESSON 01
                 </span>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-900/60">
-                  Stack Data Structure.mp4
+                <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1 ${
+                  isLesson1Completed
+                    ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300/60 dark:border-emerald-800'
+                    : 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                }`}>
+                  {isLesson1Completed ? '✓ 10 pts Earned' : '+10 pts'}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 {isLesson1Completed && (
-                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-300/60 dark:border-emerald-800" title="Completed (+50 XP)">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-300/60 dark:border-emerald-800" title="Completed (+10 pts)">
                     <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                   </span>
                 )}
@@ -258,20 +255,24 @@ export const LabView: React.FC<LabViewProps> = ({
           }`}
         >
           <div className="space-y-4">
-            {/* Top Row: Lesson label + Video Icon Container */}
+            {/* Top Row: Lesson label + Points Badge + Video Icon Container */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-bold px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase tracking-wider border border-slate-200/80 dark:border-slate-700/80">
                   LESSON 02
                 </span>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/70 dark:border-blue-900/60">
-                  Stack Operations.mp4
+                <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border flex items-center gap-1 ${
+                  isLesson2Completed
+                    ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300/60 dark:border-emerald-800'
+                    : 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                }`}>
+                  {isLesson2Completed ? '✓ 10 pts Earned' : '+10 pts'}
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 {isLesson2Completed && (
-                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-300/60 dark:border-emerald-800" title="Completed (+50 XP)">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-300/60 dark:border-emerald-800" title="Completed (+10 pts)">
                     <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                   </span>
                 )}
@@ -350,10 +351,11 @@ export const LabView: React.FC<LabViewProps> = ({
           }}
           onLessonComplete={(completedId) => {
             if (!progress.completedLabs?.includes(completedId)) {
+              soundEffects.playSuccess();
               onUpdateProgress((prev) => ({
                 ...prev,
                 completedLabs: [...(prev.completedLabs || []), completedId],
-                xp: prev.xp + 50,
+                xp: (prev.xp || 0) + 10,
               }));
             }
           }}

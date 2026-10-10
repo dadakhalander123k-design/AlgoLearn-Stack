@@ -10,6 +10,7 @@ import { LabView } from './components/views/LabView';
 import { GameView } from './components/views/GameView';
 import { QuizView } from './components/views/QuizView';
 import { ProgressView } from './components/views/ProgressView';
+import { PointsView } from './components/views/PointsView';
 import { ResetConfirmationModal } from './components/common/ResetConfirmationModal';
 import { ChatbotLogo } from './components/common/ChatbotLogo';
 import { CheckCircle2, X } from 'lucide-react';
@@ -195,6 +196,13 @@ export default function App() {
             <ProgressView
               progress={progress}
               onResetProgress={handleOpenResetModal}
+            />
+          )}
+
+          {currentTab === 'points' && (
+            <PointsView
+              progress={progress}
+              onNavigateTab={handleSelectTab}
             />
           )}
         </main>

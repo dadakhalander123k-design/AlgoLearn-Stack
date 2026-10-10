@@ -82,6 +82,8 @@ export const GameView: React.FC<GameViewProps> = ({
   const [guidedStepIndex, setGuidedStepIndex] = useState<number>(0);
   const [guidedPeekValue, setGuidedPeekValue] = useState<number | string | null>(null);
   const [activePeekValue, setActivePeekValue] = useState<number | string | null>(null);
+  const [levelHintsUsed, setLevelHintsUsed] = useState<number>(0);
+  const [levelGuidedSolveUsed, setLevelGuidedSolveUsed] = useState<boolean>(false);
 
   // Initialize or Reset Challenge State
   const setupChallenge = useCallback((challenge: GameChallenge) => {
@@ -107,6 +109,12 @@ export const GameView: React.FC<GameViewProps> = ({
     setActivePeekValue(null);
   }, []);
 
+  // When active level changes, reset level tracking
+  useEffect(() => {
+    setLevelHintsUsed(0);
+    setLevelGuidedSolveUsed(false);
+  }, [activeLevelId]);
+
   // When active level or challenge changes, re-initialize
   useEffect(() => {
     if (currentChallenge) {
@@ -119,6 +127,8 @@ export const GameView: React.FC<GameViewProps> = ({
     soundEffects.playClick();
     setCurrentChallengeIndex(0);
     setMistakes(0);
+    setLevelHintsUsed(0);
+    setLevelGuidedSolveUsed(false);
     onSelectLevel(levelId);
   };
 
@@ -188,19 +198,24 @@ export const GameView: React.FC<GameViewProps> = ({
       // Ignore
     }
 
-    const { updated } = awardXP(
-      progress,
-      currentLevel.xpReward,
-      `game_level_${currentLevel.id}_completed`,
-      `Completed Level ${currentLevel.levelNumber || currentLevel.id}`,
-      currentLevel.title
-    );
+    const deductions = levelHintsUsed * 2 + (levelGuidedSolveUsed ? 3 : 0);
+    const finalGameScore = Math.max(0, 20 - deductions);
 
-    const completed = Array.from(new Set([...updated.completedGameLevels, currentLevel.id]));
-    onUpdateProgress({
-      ...updated,
+    const alreadyCompleted = (progress.completedGameLevels || []).includes(currentLevel.id);
+    const prevGameScores = progress.gameScores || {};
+    const updatedGameScores = { ...prevGameScores };
+    if (!alreadyCompleted || prevGameScores[currentLevel.id] === undefined) {
+      updatedGameScores[currentLevel.id] = finalGameScore;
+    }
+
+    const completed = Array.from(new Set([...(progress.completedGameLevels || []), currentLevel.id]));
+
+    onUpdateProgress((prev) => ({
+      ...prev,
+      gameScores: updatedGameScores,
       completedGameLevels: completed,
-    });
+      xp: alreadyCompleted ? prev.xp : prev.xp + finalGameScore,
+    }));
 
     setLevelCompletedModalOpen(true);
   };
@@ -312,6 +327,7 @@ export const GameView: React.FC<GameViewProps> = ({
       setGuidedSteps(steps);
       setGuidedStepIndex(0);
       setIsGuidedSolveActive(true);
+      setLevelGuidedSolveUsed(true);
       setViewMode('playing');
       setFeedbackStatus(null);
 
@@ -822,6 +838,10 @@ export const GameView: React.FC<GameViewProps> = ({
         xpEarned={currentLevel.xpReward}
         mistakes={mistakes}
         hasNextLevel={activeLevelId < GAME_LEVELS.length}
+        pointsEarned={Math.max(0, 20 - (levelHintsUsed * 2) - (levelGuidedSolveUsed ? 3 : 0))}
+        deductions={levelHintsUsed * 2 + (levelGuidedSolveUsed ? 3 : 0)}
+        hintsUsed={levelHintsUsed}
+        guidedSolveUsed={levelGuidedSolveUsed}
         onNextLevel={() => {
           setLevelCompletedModalOpen(false);
           const nextLvlId = activeLevelId + 1;
@@ -830,14 +850,6 @@ export const GameView: React.FC<GameViewProps> = ({
             setViewMode('playing');
           } else {
             setViewMode('hub');
-          }
-        }}
-        onReplayLevel={() => {
-          setLevelCompletedModalOpen(false);
-          setCurrentChallengeIndex(0);
-          setMistakes(0);
-          if (currentLevel.challenges[0]) {
-            setupChallenge(currentLevel.challenges[0]);
           }
         }}
         onClose={() => {
@@ -863,14 +875,13 @@ export const GameView: React.FC<GameViewProps> = ({
         onSelectLevel={(lvlId) => {
           handleSelectLevel(lvlId);
         }}
-        onResetChallenge={handleResetChallenge}
-        onResetGame={handleResetGame}
         onBackToHub={() => {
           soundEffects.playClick();
           setViewMode('hub');
         }}
         onOpenGuidedSolve={() => handleStartGuidedSolve()}
         isGuidedSolveActive={isGuidedSolveActive}
+        currentScore={Math.max(0, 20 - (levelHintsUsed * 2) - (levelGuidedSolveUsed ? 3 : 0))}
       />
 
       {/* 2. Interactive Guided Solve Walkthrough Panel OR Focused Question Card */}
@@ -892,6 +903,7 @@ export const GameView: React.FC<GameViewProps> = ({
             challenge={currentChallenge}
             onOpenGuidedSolve={() => handleStartGuidedSolve()}
             isGuidedSolveActive={isGuidedSolveActive}
+            onUseHint={() => setLevelHintsUsed((prev) => prev + 1)}
           />
         )
       )}

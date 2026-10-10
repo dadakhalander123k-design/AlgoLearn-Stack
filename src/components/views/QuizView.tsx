@@ -5,7 +5,6 @@ import {
   Award,
   CheckCircle2,
   XCircle,
-  RotateCcw,
   ArrowRight,
   ArrowLeft,
   ChevronLeft,
@@ -17,6 +16,8 @@ import {
   AlertCircle,
   Eye,
   Home,
+  Clock,
+  Timer,
 } from 'lucide-react';
 import { QuizQuestion, UserProgress } from '../../types';
 import { QUIZ_QUESTIONS } from '../../data/quizData';
@@ -34,7 +35,10 @@ interface QuestionAnswerState {
   draggedOrder: string[];
   isSubmitted: boolean;
   isCorrect: boolean;
+  isTimedOut?: boolean;
 }
+
+const QUESTION_TIME_LIMIT = 30; // 30 seconds time limit per question
 
 export const QuizView: React.FC<QuizViewProps> = ({
   progress,
@@ -42,8 +46,24 @@ export const QuizView: React.FC<QuizViewProps> = ({
   onNavigateHome,
 }) => {
   const [currentIdx, setCurrentIdx] = useState<number>(0);
-  const [answers, setAnswers] = useState<Record<number, QuestionAnswerState>>({});
-  const [quizFinished, setQuizFinished] = useState<boolean>(false);
+  const [answers, setAnswers] = useState<Record<number, QuestionAnswerState>>(() => {
+    // Restore any previously scored questions from progress
+    const initial: Record<number, QuestionAnswerState> = {};
+    const saved = progress.quizQuestionScores || {};
+    Object.entries(saved).forEach(([qIdxStr, score]) => {
+      const qIdx = Number(qIdxStr);
+      initial[qIdx] = {
+        selectedOption: null,
+        draggedOrder: [],
+        isSubmitted: true,
+        isCorrect: score === 4,
+        isTimedOut: score === 0,
+      };
+    });
+    return initial;
+  });
+  const [timeLeft, setTimeLeft] = useState<number>(QUESTION_TIME_LIMIT);
+  const [quizFinished, setQuizFinished] = useState<boolean>(progress.quizCompleted || false);
   const [resultFilter, setResultFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
 
   const currentQ: QuizQuestion = QUIZ_QUESTIONS[currentIdx];
@@ -52,13 +72,59 @@ export const QuizView: React.FC<QuizViewProps> = ({
     draggedOrder: [],
     isSubmitted: false,
     isCorrect: false,
+    isTimedOut: false,
+  };
+
+  // Timer countdown per question
+  useEffect(() => {
+    if (quizFinished || currentAnswerState.isSubmitted) return;
+
+    setTimeLeft(QUESTION_TIME_LIMIT);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentIdx, currentAnswerState.isSubmitted, quizFinished]);
+
+  // Timeout handler: 0 points awarded
+  const handleTimeout = () => {
+    if (currentAnswerState.isSubmitted) return;
+    soundEffects.playError();
+
+    setAnswers((prev) => ({
+      ...prev,
+      [currentIdx]: {
+        selectedOption: null,
+        draggedOrder: [],
+        isSubmitted: true,
+        isCorrect: false,
+        isTimedOut: true,
+      },
+    }));
+
+    // Award 0 points on timeout, update immediately
+    const prevScores = progress.quizQuestionScores || {};
+    const updatedScores = { ...prevScores, [currentIdx]: 0 };
+    onUpdateProgress((prev) => ({
+      ...prev,
+      quizQuestionScores: updatedScores,
+      quizTotalQuestionsAnswered: Math.max(prev.quizTotalQuestionsAnswered || 0, Object.keys(updatedScores).length),
+    }));
   };
 
   // Initialize drag order or answer state if not yet set
   useEffect(() => {
     if (!answers[currentIdx]) {
       if (currentQ.type === 'drag-order' && Array.isArray(currentQ.options)) {
-        // Scramble options
         const shuffled = [...currentQ.options].sort(() => Math.random() - 0.5);
         setAnswers((prev) => ({
           ...prev,
@@ -122,6 +188,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   };
 
   const handleSubmitAnswer = () => {
+    if (currentAnswerState.isSubmitted) return;
     soundEffects.playClick();
 
     let isCorrect = false;
@@ -150,7 +217,19 @@ export const QuizView: React.FC<QuizViewProps> = ({
         }),
         isSubmitted: true,
         isCorrect,
+        isTimedOut: false,
       },
+    }));
+
+    // Award +4 pts for correct, deduct 2 pts for wrong (-2 pts), scored only once
+    const questionScore = isCorrect ? 4 : -2;
+    const prevScores = progress.quizQuestionScores || {};
+    const updatedScores = { ...prevScores, [currentIdx]: questionScore };
+
+    onUpdateProgress((prev) => ({
+      ...prev,
+      quizQuestionScores: updatedScores,
+      quizTotalQuestionsAnswered: Math.max(prev.quizTotalQuestionsAnswered || 0, Object.keys(updatedScores).length),
     }));
   };
 
@@ -167,20 +246,21 @@ export const QuizView: React.FC<QuizViewProps> = ({
     if (currentIdx + 1 < QUIZ_QUESTIONS.length) {
       setCurrentIdx((prev) => prev + 1);
     } else {
-      // Calculate final score
       finishQuiz();
     }
   };
 
   const finishQuiz = () => {
-    const totalCorrect = (Object.values(answers) as QuestionAnswerState[]).reduce(
-      (acc, ans) => acc + (ans?.isCorrect ? 1 : 0),
-      0
-    );
-
-    const totalScorePercent = Math.round(
-      (totalCorrect / QUIZ_QUESTIONS.length) * 100
-    );
+    const scores = progress.quizQuestionScores || {};
+    let totalScoreSum = 0;
+    let totalCorrectCount = 0;
+    QUIZ_QUESTIONS.forEach((_, idx) => {
+      const s = scores[idx] ?? 0;
+      totalScoreSum += s;
+      if (s === 4) totalCorrectCount++;
+    });
+    const finalPoints = Math.min(40, Math.max(0, totalScoreSum));
+    const totalScorePercent = Math.round((totalCorrectCount / QUIZ_QUESTIONS.length) * 100);
 
     setQuizFinished(true);
 
@@ -199,47 +279,79 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
     const { updated } = awardXP(
       progress,
-      150,
+      finalPoints,
       'quiz_completed',
       'Quiz Completed',
-      `Scored ${totalScorePercent}% on Assessment`
+      `Earned ${finalPoints} pts on Assessment`
     );
 
     onUpdateProgress({
       ...updated,
       quizCompleted: true,
       quizHighScore: Math.max(updated.quizHighScore, totalScorePercent),
-      quizTotalQuestionsAnswered:
-        (updated.quizTotalQuestionsAnswered || 0) + QUIZ_QUESTIONS.length,
     });
   };
 
-  const handleRestartQuiz = () => {
+  const handleReviewQuestions = () => {
     soundEffects.playClick();
     setCurrentIdx(0);
-    setAnswers({});
     setQuizFinished(false);
     setResultFilter('all');
   };
 
   // Compute live score stats
-  const answersList = Object.values(answers) as QuestionAnswerState[];
-  const totalAnswered = answersList.filter((a) => a?.isSubmitted).length;
-  const totalCorrect = answersList.filter((a) => a?.isCorrect).length;
-  const totalIncorrect = totalAnswered - totalCorrect;
-  const finalScorePercent = Math.round(
-    (totalCorrect / QUIZ_QUESTIONS.length) * 100
-  );
+  const quizScores = progress.quizQuestionScores || {};
+  let liveQuizSum = 0;
+  let totalCorrect = 0;
+  let totalIncorrect = 0;
+  let totalTimedOut = 0;
+
+  QUIZ_QUESTIONS.forEach((_, idx) => {
+    if (quizScores[idx] !== undefined) {
+      liveQuizSum += quizScores[idx];
+      if (quizScores[idx] === 4) totalCorrect++;
+      else if (quizScores[idx] === -2) totalIncorrect++;
+      else if (quizScores[idx] === 0) totalTimedOut++;
+    }
+  });
+
+  const currentQuizPoints = Math.min(40, Math.max(0, liveQuizSum));
+  const totalAnswered = Object.keys(quizScores).length;
+  const finalScorePercent = Math.round((totalCorrect / QUIZ_QUESTIONS.length) * 100);
 
   const filteredQuestions = QUIZ_QUESTIONS.filter((_, idx) => {
-    const isCorrect = answers[idx]?.isCorrect ?? false;
+    const isCorrect = quizScores[idx] === 4;
     if (resultFilter === 'correct') return isCorrect;
-    if (resultFilter === 'incorrect') return !isCorrect;
+    if (resultFilter === 'incorrect') return quizScores[idx] !== undefined && quizScores[idx] !== 4;
     return true;
   });
 
   return (
     <div className="space-y-6 pb-12 max-w-4xl mx-auto">
+      {/* ─── SCORING RULES & LIVE QUIZ POINTS BANNER ─── */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-extrabold uppercase tracking-wider text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            Quiz Scoring Rules:
+          </span>
+          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            Correct: +4 pts
+          </span>
+          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+            Wrong: -2 pts
+          </span>
+          <span className="px-2.5 py-1 rounded-lg font-bold font-mono bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+            Timeout: 0 pts
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-center font-mono font-black text-xs text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-indigo-200/80 dark:border-indigo-800 shadow-2xs">
+          <span>QUIZ POINTS:</span>
+          <span className="text-sm text-blue-600 dark:text-blue-400">{currentQuizPoints} / 40 PTS</span>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -252,7 +364,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             </h1>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Validate your algorithmic Stack reasoning and earn mastery points.
+            10 Questions • 30s per question • Answered once with immediate scoring.
           </p>
         </div>
 
@@ -282,6 +394,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <div className="flex items-center justify-between gap-1 overflow-x-auto py-1 px-0.5">
             {QUIZ_QUESTIONS.map((q, idx) => {
               const ans = answers[idx];
+              const score = quizScores[idx];
               const isCurrent = idx === currentIdx;
               let chipBg =
                 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700';
@@ -289,10 +402,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
               if (isCurrent) {
                 chipBg =
                   'bg-blue-600 text-white border-blue-500 ring-2 ring-blue-300 dark:ring-blue-800 font-bold';
-              } else if (ans?.isSubmitted) {
-                if (ans.isCorrect) {
+              } else if (ans?.isSubmitted || score !== undefined) {
+                if (score === 4 || ans?.isCorrect) {
                   chipBg =
                     'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700';
+                } else if (score === 0 || ans?.isTimedOut) {
+                  chipBg =
+                    'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700';
                 } else {
                   chipBg =
                     'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700';
@@ -310,11 +426,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   title={`Question ${idx + 1}: ${q.type}`}
                 >
                   <span>Q{idx + 1}</span>
-                  {ans?.isSubmitted && ans.isCorrect && (
+                  {(score === 4 || (ans?.isSubmitted && ans.isCorrect)) && (
                     <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
                   )}
-                  {ans?.isSubmitted && !ans.isCorrect && (
+                  {(score === -2 || (ans?.isSubmitted && !ans.isCorrect && !ans.isTimedOut)) && (
                     <span className="text-[10px] text-rose-500 font-black leading-none">✕</span>
+                  )}
+                  {(score === 0 || (ans?.isSubmitted && ans.isTimedOut)) && (
+                    <Clock className="w-3 h-3 text-slate-400" />
                   )}
                 </button>
               );
@@ -326,24 +445,58 @@ export const QuizView: React.FC<QuizViewProps> = ({
       {/* Main Quiz Question Card */}
       {!quizFinished ? (
         <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-6">
-          {/* Question Category Badge & Text */}
-          <div>
-            <div className="flex items-center justify-between gap-2">
+          {/* Question Category Badge, Timer & Status */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-[10px] uppercase font-bold tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/80 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
                 {currentQ.type.replace('-', ' ')}
               </span>
+
+              {/* Question Countdown Timer */}
+              {!currentAnswerState.isSubmitted && (
+                <div
+                  className={`px-3 py-1 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 border transition-all ${
+                    timeLeft <= 5
+                      ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800 animate-pulse'
+                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                  }`}
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                  <span>{timeLeft}s remaining</span>
+                </div>
+              )}
+
+              {/* Status Badge after evaluation */}
               {currentAnswerState.isSubmitted && (
                 <span
                   className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                    currentAnswerState.isCorrect
+                    currentAnswerState.isTimedOut
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                      : currentAnswerState.isCorrect
                       ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700'
                       : 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-700'
                   }`}
                 >
-                  {currentAnswerState.isCorrect ? '✓ Correct' : '✕ Incorrect'}
+                  {currentAnswerState.isTimedOut
+                    ? '⏱ Time Expired (0 pts)'
+                    : currentAnswerState.isCorrect
+                    ? '✓ Correct (+4 pts)'
+                    : '✕ Incorrect (-2 pts)'}
                 </span>
               )}
             </div>
+
+            {/* Timer Bar */}
+            {!currentAnswerState.isSubmitted && (
+              <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-1000 ${
+                    timeLeft <= 5 ? 'bg-rose-500' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${(timeLeft / QUESTION_TIME_LIMIT) * 100}%` }}
+                />
+              </div>
+            )}
 
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-2.5 leading-relaxed whitespace-pre-line">
               {currentQ.question}
@@ -618,11 +771,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-lg mx-auto">
                 <button
-                  onClick={handleRestartQuiz}
+                  onClick={handleReviewQuestions}
                   className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-500 hover:from-blue-800 hover:via-blue-700 hover:to-indigo-600 text-white rounded-2xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-blue-500/25 active:scale-95"
                 >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Retake Quiz</span>
+                  <Eye className="w-4 h-4" />
+                  <span>Review Questions</span>
                 </button>
                 {onNavigateHome && (
                   <button

@@ -82,13 +82,28 @@ export const GameHub: React.FC<GameHubProps> = ({
   return (
     <div className="space-y-8 pb-16 max-w-5xl mx-auto animate-in fade-in duration-200">
       {/* ─── 1. SIMPLE GAME PAGE HEADER ─── */}
-      <div className="space-y-1.5 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-          GAME
-        </h1>
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-          Practice Stack concepts through interactive challenges.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            GAME
+          </h1>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-0.5">
+            2 Games • 20 Points per game • Total: 40 Points. Complete all rounds to earn points.
+          </p>
+        </div>
+
+        {/* Game Points Summary Badge */}
+        <div className="px-3.5 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs flex items-center gap-1.5 shadow-2xs self-start sm:self-center">
+          <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span>
+            {Math.min(
+              40,
+              (progress.gameScores?.[1] ?? (completedLevels.includes(1) ? 20 : 0)) +
+                (progress.gameScores?.[2] ?? (completedLevels.includes(2) ? 20 : 0))
+            )}{' '}
+            / 40 PTS
+          </span>
+        </div>
       </div>
 
       {/* ─── 2. EXACTLY TWO GAME CARDS ─── */}
@@ -125,19 +140,26 @@ export const GameHub: React.FC<GameHubProps> = ({
                     </div>
                   </div>
 
-                  {/* Completion Status Badge */}
-                  <div>
+                  {/* Completion Status & Points Badge */}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+                      isCompleted
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+                    }`}>
+                      {isCompleted ? `✓ ${progress.gameScores?.[game.id] ?? 20} pts Earned` : '+20 pts'}
+                    </span>
                     {isCompleted ? (
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Completed
                       </span>
                     ) : isInProgress ? (
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5" /> In Progress
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                        <Flame className="w-3 h-3" /> In Progress
                       </span>
                     ) : (
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                        ○ Not Started
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        ○ Ready
                       </span>
                     )}
                   </div>

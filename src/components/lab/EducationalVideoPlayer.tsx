@@ -343,10 +343,12 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
     }
   };
 
-  // Step 5s backward or forward
+  // Step 5s/10s backward only (forward disabled)
   const handleSkipTime = (seconds: number) => {
+    // Only allow backward skip (negative seconds)
+    if (seconds > 0) return;
     soundEffects.playClick();
-    const newTime = Math.min(totalDuration, Math.max(0, currentTime + seconds));
+    const newTime = Math.max(0, currentTime + seconds);
     setCurrentTime(newTime);
     currentSceneIdRef.current = -1;
     if (isVideoMode && nativeVideoRef.current) {
@@ -354,9 +356,10 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
     }
   };
 
-  // Seek timeline
+  // Seek timeline: only allow backward navigation (no forward seeking)
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const seekTime = parseFloat(e.target.value);
+    if (seekTime > currentTime) return; // Prevent forward seek
     setCurrentTime(seekTime);
     currentSceneIdRef.current = -1;
     if (isVideoMode && nativeVideoRef.current) {
@@ -364,11 +367,12 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
     }
   };
 
-  // Scene jumper
+  // Scene jumper: only allow jumping backward to already seen scenes
   const handleJumpScene = (sceneIndex: number) => {
     if (sceneIndex >= 0 && sceneIndex < activeLesson.scenes.length) {
-      soundEffects.playClick();
       const targetTime = activeLesson.scenes[sceneIndex].timeStart;
+      if (targetTime > currentTime) return; // Prevent forward jump
+      soundEffects.playClick();
       setCurrentTime(targetTime);
       currentSceneIdRef.current = -1;
       if (isVideoMode && nativeVideoRef.current) {
@@ -379,8 +383,9 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
     }
   };
 
-  // Speed change
+  // Speed change: limit to 1x normal speed (prevent fast-forwarding)
   const handleSpeedChange = (speed: number) => {
+    if (speed > 1) return; // Prevent fast-forwarding
     soundEffects.playClick();
     setPlaybackSpeed(speed);
     if (nativeVideoRef.current) {
@@ -482,14 +487,19 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
       const rect = progressTrackRef.current.getBoundingClientRect();
       const clampedX = Math.max(0, Math.min(clientX - rect.left, rect.width));
       const ratio = rect.width > 0 ? clampedX / rect.width : 0;
-      const seekTime = Math.max(0, Math.min(ratio * totalDuration, totalDuration));
+      const targetSeekTime = Math.max(0, Math.min(ratio * totalDuration, totalDuration));
+      // Strictly prevent seeking forward: backward navigation only
+      if (targetSeekTime > currentTime) {
+        return;
+      }
+      const seekTime = targetSeekTime;
       setCurrentTime(seekTime);
       currentSceneIdRef.current = -1;
       if (isVideoMode && nativeVideoRef.current) {
         nativeVideoRef.current.currentTime = seekTime;
       }
     },
-    [totalDuration, isVideoMode]
+    [totalDuration, isVideoMode, currentTime]
   );
 
   // Auto-hide fullscreen controls timer logic
@@ -1015,7 +1025,7 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 pt-1">
           {/* Left: Rewind 10s, Pause/Play, Forward 10s */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Rewind 10s */}
+            {/* Rewind 10s - Backward Navigation Allowed */}
             <button
               onClick={() => handleSkipTime(-10)}
               className={`p-2.5 sm:p-3 rounded-2xl font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs group ${
@@ -1047,23 +1057,9 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
                 </>
               )}
             </button>
-
-            {/* Forward 10s */}
-            <button
-              onClick={() => handleSkipTime(10)}
-              className={`p-2.5 sm:p-3 rounded-2xl font-bold transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs group ${
-                isFullscreen
-                  ? 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700/80'
-              }`}
-              title="Forward 10 seconds"
-              aria-label="Forward 10 seconds"
-            >
-              <RotateCw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-12 transition-transform" />
-            </button>
           </div>
 
-          {/* Middle: Playback Speed Selector (0.5x, 1x, 1.5x, 2x) */}
+          {/* Middle: Standard Playback Rate (Fast-Forwarding Forbidden) */}
           <div
             className={`flex items-center rounded-2xl p-1 font-mono text-xs ${
               isFullscreen
@@ -1071,7 +1067,7 @@ export const EducationalVideoPlayer: React.FC<EducationalVideoPlayerProps> = ({
                 : 'bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80'
             }`}
           >
-            {[0.5, 1, 1.5, 2].map((spd) => (
+            {[0.75, 1].map((spd) => (
               <button
                 key={spd}
                 onClick={() => handleSpeedChange(spd)}

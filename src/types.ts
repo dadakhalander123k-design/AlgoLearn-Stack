@@ -65,6 +65,12 @@ export interface UserProgress {
     xpEarned: number;
     timestamp: string;
   }[];
+  // 100-Point Topic Scoring fields
+  completedLabs?: number[]; // video IDs [1, 2] completed (10 pts each = 20 pts max)
+  gameScores?: Record<number, number>; // levelId -> points earned (20 max per game = 40 max)
+  gameHintsUsed?: Record<number, number>; // levelId -> count of hints used (-2 pts each)
+  gameGuidedSolveUsed?: Record<number, boolean>; // levelId -> whether guided solve was used (-3 pts)
+  quizQuestionScores?: Record<number, number>; // questionId (0..9) -> points earned (+4, -2, 0)
 }
 
 export type TheoryCategoryKey = '01' | '02' | '03' | '04' | '05';
